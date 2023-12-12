@@ -8,8 +8,7 @@
     "server": "nodemon backend/server.js",
     "client": "npm run start --prefix frontend",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "npm run build --prefix frontend",
-    "postinstall": "cd frontend && npm install && npm run build"
+    "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend"
   },
   "author": "zakisu",
   "license": "MIT",
