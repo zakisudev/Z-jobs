@@ -22,10 +22,10 @@ app.use((req, res, next) => {
 // Cookie parser
 app.use(cookieParser());
 
-// Serve static assets in production
+// make uploads folder static
 const __dirname = path.resolve();
+app.use('/upload', express.static(path.join(__dirname, 'frontend', ' public')));
 
-// Serve the static files from the React app
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'frontend', 'build')));
 
@@ -37,11 +37,6 @@ if (process.env.NODE_ENV === 'production') {
     res.send('API is running...');
   });
 }
-
-// Handle any other requests by serving the React app
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
-});
 
 // API routes
 app.use('/api/jobs', router);
