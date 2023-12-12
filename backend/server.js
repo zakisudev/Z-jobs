@@ -22,17 +22,25 @@ app.use((req, res, next) => {
 // Cookie parser
 app.use(cookieParser());
 
+// Serve static assets in production
+const __dirname = path.resolve();
+
 // Serve the static files from the React app
-app.use(express.static(path.join(__dirname, 'frontend', 'build')));
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'frontend', 'build')));
+
+  app.get('*', (req, res) =>
+    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
+  );
+} else {
+  app.get('/', (req, res) => {
+    res.send('API is running...');
+  });
+}
 
 // Handle any other requests by serving the React app
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
-});
-
-// API status
-app.route('/').get((req, res) => {
-  res.send('Server is running');
 });
 
 // API routes
