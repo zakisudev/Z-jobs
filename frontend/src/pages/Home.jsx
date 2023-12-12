@@ -15,9 +15,27 @@ export const Home = () => {
           Track your job applications and stay organized throughout your job
           search.
         </p>
+        <div className="flex justify-center space-x-4">
+          <div>
+            <img
+              src="/illustration.svg" // Replace with your illustration/image
+              alt="Illustration"
+              className="h-48 w-auto"
+            />
+          </div>
+          <div className="flex flex-col justify-center">
+            <h2 className="text-xl font-semibold mb-2">Why Z-jobs?</h2>
+            <p className="text-gray-700">
+              Our platform simplifies job tracking, allowing you to manage
+              applications seamlessly.
+            </p>
+          </div>
+        </div>
+
+        {/* Call-to-action Button */}
         <button
           onClick={() => navigate('/register')}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded mt-8 transition duration-300"
         >
           Get Started
         </button>
