@@ -25,7 +25,7 @@ const router = createBrowserRouter(
       <Route path="/about" element={<About />} />
       <Route path="/profile" element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />}>
-          <Route path="account" element={<AccountProfile />} />
+          <Route index element={<AccountProfile />} />
           <Route path=":name" element={<ProfileDetails />} />
           <Route path="jobs" element={<MyJobs />} />
         </Route>

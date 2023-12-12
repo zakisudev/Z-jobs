@@ -51,7 +51,7 @@ export const updateJob = async ({ newJobId, newEditedJob }) => {
 export const deleteJob = async (jobId) => {
   try {
     const response = await axios.delete(`${JOBS_URL}/${jobId}`);
-    const data = await response.data();
+    const data = await response.data;
     return data;
   } catch (error) {
     throw new Error(error?.response?.data?.message || error.message);

@@ -4,8 +4,6 @@ npm-debug.log
 yarn-error.log
 
 # React
-build/
-dist/
 .env
 
 # IDE/Editor specific

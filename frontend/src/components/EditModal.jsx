@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
-import { deleteJob, updateJob } from '../services/jobApis';
+import { updateJob } from '../services/jobApis';
 import Loader from '../assets/images/Loading.svg';
 
-export const EditModal = ({ jobEdit, setJobEdit, setShowEditModal }) => {
+export const EditModal = ({
+  jobEdit,
+  setJobEdit,
+  setShowEditModal,
+  setJobs,
+  jobs,
+}) => {
   const [newEditedJob, setNewEditedJob] = useState({
     company: jobEdit.company || '',
     website: jobEdit.website || '',
@@ -25,7 +31,8 @@ export const EditModal = ({ jobEdit, setJobEdit, setShowEditModal }) => {
     const newJobId = jobEdit._id;
     try {
       const res = await updateJob({ newJobId, newEditedJob });
-      setJobEdit(res);
+      const newJobs = jobs.map((job) => (job._id === res._id ? res : job));
+      setJobs(newJobs);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -162,11 +169,10 @@ export const EditModal = ({ jobEdit, setJobEdit, setShowEditModal }) => {
           <button
             type="submit"
             disabled={isLoading}
-            // onClick={handleDeleteJob}
             className="bg-blue-500 text-white px-4 py-2 rounded mt-3 font-bold uppercase"
           >
             {isLoading ? (
-              <img src={Loader} alt="Loading" className="w-6 h-6" />
+              <img src={Loader} alt="Loading" className="w-6 h-6 mx-auto" />
             ) : (
               'Save edited Job'
             )}

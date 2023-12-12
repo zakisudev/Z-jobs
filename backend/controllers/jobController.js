@@ -64,7 +64,7 @@ const updateJob = asyncHandler(async (req, res) => {
     req.body;
 
   try {
-    const job = await Job.findOne({ user: req.user._id });
+    const job = await Job.findOne({ user: req.user._id, _id: req.params.id });
 
     if (job) {
       job.company = company;
@@ -90,10 +90,12 @@ const updateJob = asyncHandler(async (req, res) => {
 // @access  Private
 const deleteJob = asyncHandler(async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id);
+    const job = await Job.findOneAndDelete({
+      user: req.user._id,
+      _id: req.params.id,
+    });
     if (job) {
-      await job.remove();
-      res.json({ message: 'Job removed' });
+      res.status(200).json(job);
     } else {
       res.status(404).json({ message: 'Job not found' });
     }

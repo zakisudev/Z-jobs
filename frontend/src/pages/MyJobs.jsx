@@ -52,9 +52,15 @@ const MyJobs = () => {
           </button>
         </div>
 
-        <div className="flex w-full">
-          <JobTable jobs={jobs} setJobs={setJobs} />
-        </div>
+        {jobs.length === 0 ? (
+          <div className="flex justify-center items-center w-full">
+            <p className="text-2xl font-bold">No Jobs registered yet</p>
+          </div>
+        ) : (
+          <div className="flex w-full">
+            <JobTable jobs={jobs} setJobs={setJobs} />
+          </div>
+        )}
       </div>
     </>
   );

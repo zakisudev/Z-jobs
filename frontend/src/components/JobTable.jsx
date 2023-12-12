@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { EditModal } from './EditModal';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { deleteJob } from '../services/jobApis';
+import { toast } from 'react-toastify';
 
-const JobTable = ({ jobs }) => {
+const JobTable = ({ jobs, setJobs }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [message, setMessage] = useState('');
 
   const [jobEdit, setJobEdit] = useState({
     company: '',
@@ -30,6 +33,19 @@ const JobTable = ({ jobs }) => {
     });
   };
 
+  const handleDeleteJob = async (jobId) => {
+    try {
+      if (!window.confirm('Are you sure you want to delete this job?')) return;
+      await deleteJob(jobId);
+      const newJobs = jobs.filter((job) => job._id !== jobId);
+      setJobs(newJobs);
+      toast.success('Job deleted successfully');
+      setMessage('');
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col items-center w-full">
@@ -43,6 +59,8 @@ const JobTable = ({ jobs }) => {
               setShowEditModal={setShowEditModal}
               jobEdit={jobEdit}
               setJobEdit={setJobEdit}
+              setJobs={setJobs}
+              jobs={jobs}
             />
           </>
         )}
@@ -90,7 +108,10 @@ const JobTable = ({ jobs }) => {
                     >
                       <FaEdit />
                     </button>
-                    <button className="p-1 text-red-400 hover:bg-red-300 hover:text-white rounded-sm text-sm font-bold uppercase">
+                    <button
+                      onClick={() => handleDeleteJob(job._id)}
+                      className="p-1 text-red-400 hover:bg-red-300 hover:text-white rounded-sm text-sm font-bold uppercase"
+                    >
                       <FaTrashAlt />
                     </button>
                   </td>
@@ -99,6 +120,12 @@ const JobTable = ({ jobs }) => {
             )}
           </tbody>
         </table>
+
+        {message && (
+          <div className="flex justify-center items-center w-full">
+            <p>{message}</p>
+          </div>
+        )}
       </div>
     </>
   );
