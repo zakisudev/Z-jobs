@@ -49,7 +49,7 @@ The application will be running at `http://localhost:3000`.
 
 ## Usage
 
-After starting the server, you can register as a new user, browse job listings, apply for jobs, and manage your applications.
+After starting the server, you can register as a new user, browse jobs added, add jobs to your MyJobs section, Edit Your profile, and track your jobs easily.
 
 ## Contributing
 
