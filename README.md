@@ -29,12 +29,14 @@ git clone https://github.com/zakisudev/Z-jobs.git
 2. Install NPM packages:
 
 ```bash
-cd Z-jobs npm install
+cd Z-jobs
+npm install
 ```
 
 3. Create a `.env` file in the root directory of the project and add the following:
 
 JWT_SECRET=YOUR_JWT_SECRET
+
 MONGO_URI=YOUR_MONGO_DB_URI
 
 4. Start the server:
@@ -47,7 +49,7 @@ The application will be running at `http://localhost:3000`.
 
 ## Usage
 
-After starting the server, you can register as a new user, browse job listings, apply for jobs, and manage your applications.
+After starting the server, you can register as a new user, browse jobs added, add jobs to your MyJobs section, Edit Your profile, and track your jobs easily.
 
 ## Contributing
 
