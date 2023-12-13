@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IoMdArrowDropdown } from 'react-icons/io';
 
@@ -11,17 +11,6 @@ export const Navbar = () => {
     localStorage.removeItem('userInfo');
     navigate('/login');
   };
-
-  useEffect(() => {
-    if (!userInfo) {
-      navigate('/login');
-    }
-    document.addEventListener('click', (e) => {
-      if (e.target.id !== 'options-menu') {
-        setShowDropdown(false);
-      }
-    });
-  }, [navigate, userInfo]);
 
   return (
     <>
@@ -61,12 +50,7 @@ export const Navbar = () => {
                 {/* Dropdown */}
                 {showDropdown && (
                   <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                    <div
-                      className="py-1"
-                      role="menu"
-                      aria-orientation="vertical"
-                      aria-labelledby="options-menu"
-                    >
+                    <div className="py-1" role="menu">
                       <button
                         onClick={() => {
                           setShowDropdown(false);
