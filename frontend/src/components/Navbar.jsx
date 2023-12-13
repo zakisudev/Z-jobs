@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IoMdArrowDropdown } from 'react-icons/io';
+import { logoutUser } from '../services/userApis';
+import { toast } from 'react-toastify';
 
 export const Navbar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('userInfo');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      localStorage.removeItem('userInfo');
+      navigate('/');
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.log(error);
+      toast.error('Error logging out');
+    }
   };
 
   return (
