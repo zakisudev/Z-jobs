@@ -23,27 +23,18 @@ const sendEmail = asyncHandler(async (req, res) => {
     throw new Error('Please provide a valid email');
   }
 
-  // Check if the user already exists
+  // Check first if the user exists
   const userExists = await User.findOne({ email });
 
-  if (userExists) {
+  if (!userExists) {
     res.status(400);
-    throw new Error('User already exists');
+    throw new Error("User doesn't exists");
   }
-
-  // Create the user
-  const user = await User.create({
-    email,
-  });
-
-  // Send the user information and the token cookie
-  generateToken(res, user._id);
 
   // Send the email
   const transporter = nodemailer.createTransport({
     host: 'us2.smtp.mailhostbox.com',
     port: 587,
-    secure: true,
     auth: {
       user: process.env.EMAIL_ADDRESS,
       pass: process.env.EMAIL_PASSWORD,
@@ -52,19 +43,26 @@ const sendEmail = asyncHandler(async (req, res) => {
 
   const mailOptions = {
     from: `Support, ${process.env.EMAIL_ADDRESS}`,
-    to: email,
+    to: userExists.email,
     subject: 'Verify your email',
     html: emailTemplate(),
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      res.status(500);
-      throw new Error('Email not sent');
-    } else {
-      res.status(200).json({ message: 'Email sent' });
-    }
-  });
+  try {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        res.status(500);
+        throw new Error('Email not sent');
+      } else {
+        res
+          .status(200)
+          .json({ message: 'Email sent, please check your inbox' });
+      }
+    });
+  } catch (error) {
+    res.status(500);
+    throw new Error('Email not sent');
+  }
 });
 
 // @desc    Nodemailer email verification
@@ -197,6 +195,23 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
   });
 
+  if (user) {
+    let transporter = nodemailer.createTransport({
+      host: 'us2.smtp.mailhostbox.com',
+      port: 587,
+      // secure: true,
+      auth: {
+        user: process.env.EMAIL_ADDRESS,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+    let info = await transporter.sendMail({
+      from: `Support@Z-jobs <${process.env.EMAIL_ADDRESS}>`,
+      to: email,
+      subject: 'Welcome to Z-jobs',
+      html: emailTemplate(),
+    });
+  }
   // Send the user information and the token cookie
   generateToken(res, user._id);
 
