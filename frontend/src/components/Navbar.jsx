@@ -30,14 +30,14 @@ export const Navbar = () => {
               <h1>Z-Jobs</h1>
             </Link>
           </div>
-          <div className="flex gap-2">
+          <div className="flex">
             <div className="text-center px-5 rounded-lg hover:bg-gray-300 py-1">
-              <Link to="/about" className="text-2xl font-bold">
+              <Link to="/about" className="text-xl font-bold">
                 <h1>About</h1>
               </Link>
             </div>
             <div className="text-center px-5 rounded-lg hover:bg-gray-300 py-1">
-              <Link to="/contact" className="text-2xl font-bold">
+              <Link to="/contact" className="text-xl font-bold">
                 <h1>Contact</h1>
               </Link>
             </div>
@@ -86,14 +86,14 @@ export const Navbar = () => {
             {!userInfo && (
               <div className="flex gap-2">
                 <div className="text-center px-5 rounded-lg hover:bg-gray-300 py-1">
-                  <a href="/login" className="text-2xl font-bold">
+                  <Link to="/login" className="text-xl font-bold">
                     <h1>Login</h1>
-                  </a>
+                  </Link>
                 </div>
-                <div className="text-center px-5 rounded-lg bg-blue-500 py-1">
-                  <a href="/register" className="text-2xl font-bold">
+                <div className="text-center px-5 rounded-lg bg-blue-400 hover:bg-blue-600 text-white py-1">
+                  <Link to="/register" className="text-xl font-bold">
                     <h1>Register</h1>
-                  </a>
+                  </Link>
                 </div>
               </div>
             )}
