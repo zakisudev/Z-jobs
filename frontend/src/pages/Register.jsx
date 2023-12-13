@@ -87,7 +87,7 @@ const Register = () => {
                 placeholder="Name"
                 name="name"
                 onChange={(e) => setUsername(e.target.value)}
-                className="p-2 border-2 shadow-lg"
+                className="p-2 shadow-lg"
                 required
               />
             </div>
@@ -98,7 +98,7 @@ const Register = () => {
                 placeholder="Email"
                 name="email"
                 onChange={(e) => setEmail(e.target.value)}
-                className="p-2 border-2 shadow-lg"
+                className="p-2 shadow-lg"
                 required
               />
             </div>
@@ -109,7 +109,7 @@ const Register = () => {
                 name="password"
                 placeholder="Password"
                 onChange={(e) => setPassword(e.target.value)}
-                className="p-2 border-2 shadow-lg"
+                className="p-2 shadow-lg"
                 required
               />
             </div>
@@ -120,13 +120,17 @@ const Register = () => {
                 name="confirmPassword"
                 placeholder="Confirm Password"
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="p-2 border-2 shadow-lg"
+                className="p-2 shadow-lg"
                 required
               />
             </div>
 
             {isLoading ? (
-              <img src={Loader} alt="Loading..." className="w-6 h-6 mx-auto" />
+              <img
+                src={Loader}
+                alt="Loading..."
+                className="w-10 h-10 mx-auto my-3"
+              />
             ) : (
               <button
                 type="submit"
@@ -139,7 +143,7 @@ const Register = () => {
 
             {message && (
               <div>
-                <p className="text-red-500 text-center">{message}</p>
+                <p className="text-red-500 text-center font-bold">{message}</p>
               </div>
             )}
 

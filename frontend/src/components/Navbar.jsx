@@ -6,18 +6,22 @@ import { toast } from 'react-toastify';
 
 export const Navbar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    setIsLoading(true);
     try {
       await logoutUser();
       localStorage.removeItem('userInfo');
       navigate('/');
       toast.success('Logged out successfully');
+      setIsLoading(false);
     } catch (error) {
-      console.log(error);
       toast.error('Error logging out');
+      setIsLoading(false);
     }
   };
 
@@ -93,10 +97,11 @@ export const Navbar = () => {
                       </button>
                       <button
                         onClick={handleLogout}
+                        disabled={isLoading}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         role="menuitem"
                       >
-                        Logout
+                        {isLoading ? 'Logging out...' : 'Logout'}
                       </button>
                     </div>
                   </div>

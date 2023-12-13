@@ -67,7 +67,7 @@ const Login = () => {
                 placeholder="Email"
                 name="email"
                 onChange={(e) => setEmail(e.target.value)}
-                className="p-2 border-2 shadow-lg"
+                className="p-2 shadow-lg"
               />
             </div>
 
@@ -75,8 +75,8 @@ const Login = () => {
               <input
                 type="password"
                 value={password}
-                name="password"
                 placeholder="Password"
+                name="password"
                 onChange={(e) => setPassword(e.target.value)}
                 className="p-2 shadow-lg"
               />
@@ -94,7 +94,11 @@ const Login = () => {
             </div>
 
             {isLoading ? (
-              <img src={Loader} alt="Loading..." className="w-6 h-6 mx-auto" />
+              <img
+                src={Loader}
+                alt="Loading..."
+                className="w-10 h-10 mx-auto mb-3"
+              />
             ) : (
               <button
                 type="submit"
@@ -107,12 +111,12 @@ const Login = () => {
 
             {message && (
               <div>
-                <p className="text-red-500 text-center">{message}</p>
+                <p className="text-red-500 text-center font-bold">{message}</p>
               </div>
             )}
 
-            <div className="flex justify-center text-center mt-5">
-              <p className="text-lg">Don't have an account?</p>
+            <div className="flex justify-center text-center mt-5 p-1">
+              <p className="text-lg mr-2">Don't have an account?</p>
               <Link
                 to="/register"
                 className="text-lg text-blue-500 underline font-bold"

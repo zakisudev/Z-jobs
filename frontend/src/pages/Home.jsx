@@ -4,6 +4,7 @@ import image from '../assets/images/bg.png';
 
 export const Home = () => {
   const navigate = useNavigate();
+
   return (
     <>
       <div className="flex flex-col h-screen overflow-hidden">

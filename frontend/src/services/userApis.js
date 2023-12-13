@@ -32,7 +32,7 @@ export const loginUser = async (user) => {
 export const logoutUser = async () => {
   try {
     const response = await axios.get(LOGOUT_URL);
-    const data = await response.json();
+    const data = await response.data;
     return data;
   } catch (err) {
     throw Error(err?.response?.data?.message || err.message);
@@ -43,7 +43,7 @@ export const logoutUser = async () => {
 export const getUserProfile = async () => {
   try {
     const response = await axios.get(USER_PROFILE_URL);
-    const data = await response.json();
+    const data = await response.data;
     return data;
   } catch (err) {
     throw Error(err?.response?.data?.message || err.message);
@@ -54,7 +54,7 @@ export const getUserProfile = async () => {
 export const updateUserProfile = async (user) => {
   try {
     const response = await axios.put(USER_PROFILE_URL, user);
-    const data = await response.json();
+    const data = await response.data;
     return data;
   } catch (err) {
     throw Error(err?.response?.data?.message || err.message);
