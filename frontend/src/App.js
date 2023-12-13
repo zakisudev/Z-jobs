@@ -15,6 +15,7 @@ import Profile from './pages/Profile';
 import AccountProfile from './pages/AccountProfile';
 import ProfileDetails from './pages/ProfileDetails';
 import MyJobs from './pages/MyJobs';
+import Settings from './pages/Settings';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -28,6 +29,7 @@ const router = createBrowserRouter(
           <Route index element={<AccountProfile />} />
           <Route path=":name" element={<ProfileDetails />} />
           <Route path="jobs" element={<MyJobs />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Route>
     </Route>
