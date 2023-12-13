@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IoMdArrowDropdown } from 'react-icons/io';
 import { logoutUser } from '../services/userApis';
@@ -20,6 +20,15 @@ export const Navbar = () => {
       toast.error('Error logging out');
     }
   };
+
+  useEffect(() => {
+    document.addEventListener('click', (e) => {
+      console.log(e.target.parentElement.className);
+      if (e.target.id !== 'options-menu') {
+        setShowDropdown(false);
+      }
+    });
+  }, [userInfo]);
 
   return (
     <>
@@ -43,12 +52,15 @@ export const Navbar = () => {
             </div>
 
             {userInfo && (
-              <div className="relative inline-block text-left">
+              <div
+                className="relative inline-block text-left"
+                onClick={() => setShowDropdown(true)}
+              >
                 <button
-                  onClick={() => setShowDropdown(!showDropdown)}
                   type="button"
                   className="inline-flex justify-center w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
                   id="options-menu"
+                  onClick={() => setShowDropdown(!showDropdown)}
                 >
                   {userInfo.username.replace(/\b\w/g, (char) =>
                     char.toUpperCase()
