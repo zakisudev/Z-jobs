@@ -23,7 +23,6 @@ export const Navbar = () => {
 
   useEffect(() => {
     document.addEventListener('click', (e) => {
-      console.log(e.target.parentElement.className);
       if (e.target.id !== 'options-menu') {
         setShowDropdown(false);
       }
@@ -54,19 +53,29 @@ export const Navbar = () => {
             {userInfo && (
               <div
                 className="relative inline-block text-left"
-                onClick={() => setShowDropdown(true)}
+                // onClick={() => setShowDropdown(!showDropdown)}
               >
-                <button
-                  type="button"
-                  className="inline-flex justify-center w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
-                  id="options-menu"
+                <div
+                  className="flex"
                   onClick={() => setShowDropdown(!showDropdown)}
                 >
-                  {userInfo.username.replace(/\b\w/g, (char) =>
-                    char.toUpperCase()
-                  )}
-                  <IoMdArrowDropdown className="ml-2 -mr-1 h-5 w-5" />
-                </button>
+                  <button
+                    type="button"
+                    id="options-menu"
+                    className="inline-flex justify-center w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+                  >
+                    {userInfo.username.replace(/\b\w/g, (char) =>
+                      char.toUpperCase()
+                    )}
+                    <IoMdArrowDropdown
+                      className="ml-2 -mr-1 h-5 w-5 z-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDropdown(!showDropdown);
+                      }}
+                    />
+                  </button>
+                </div>
 
                 {/* Dropdown */}
                 {showDropdown && (
