@@ -1,6 +1,113 @@
 const User = require('../models/userModel');
 const asyncHandler = require('express-async-handler');
 const generateToken = require('../utils/generateToken');
+const nodemailer = require('nodemailer');
+const emailTemplate = require('../utils/emailTemplate');
+
+// @desc    Nodemailer send email
+// @route   POST /api/users/send
+// @access  Public
+const sendEmail = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  // Check for email
+  if (!email) {
+    res.status(400);
+    throw new Error('Please provide an email');
+  }
+
+  // Check if email is valid email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    res.status(400);
+    throw new Error('Please provide a valid email');
+  }
+
+  // Check if the user already exists
+  const userExists = await User.findOne({ email });
+
+  if (userExists) {
+    res.status(400);
+    throw new Error('User already exists');
+  }
+
+  // Create the user
+  const user = await User.create({
+    email,
+  });
+
+  // Send the user information and the token cookie
+  generateToken(res, user._id);
+
+  // Send the email
+  const transporter = nodemailer.createTransport({
+    host: 'us2.smtp.mailhostbox.com',
+    port: 587,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL_ADDRESS,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: `Support, ${process.env.EMAIL_ADDRESS}`,
+    to: email,
+    subject: 'Verify your email',
+    html: emailTemplate(),
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      res.status(500);
+      throw new Error('Email not sent');
+    } else {
+      res.status(200).json({ message: 'Email sent' });
+    }
+  });
+});
+
+// @desc    Nodemailer email verification
+// @route   POST /api/users/verify
+// @access  Public
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  // Check for email
+  if (!email) {
+    res.status(400);
+    throw new Error('Please provide an email');
+  }
+
+  // Check if email is valid email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    res.status(400);
+    throw new Error('Please provide a valid email');
+  }
+
+  // Check if the user already exists
+  const userExists = await User.findOne({ email });
+
+  if (userExists) {
+    res.status(400);
+    throw new Error('User already exists');
+  }
+
+  // Create the user
+  const user = await User.create({
+    email,
+  });
+
+  // Send the user information and the token cookie
+  generateToken(res, user._id);
+
+  res.status(201).json({
+    _id: user._id,
+    email: user.email,
+    isAdmin: user.isAdmin,
+  });
+});
 
 // @desc    Auth user & get token
 // @route   POST /api/users/login
@@ -259,6 +366,8 @@ const deleteUser = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  sendEmail,
+  verifyEmail,
   authUser,
   registerUser,
   logoutUser,
