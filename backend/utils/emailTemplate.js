@@ -1,4 +1,4 @@
-export const emailTemplate = () => {
+const emailTemplate = () => {
   return `
     <h1>Thank you for registering!</h1>
     <p>You have successfully registered for Z-jobs.</p>
@@ -7,3 +7,5 @@ export const emailTemplate = () => {
     <p>Thank you!</p>
   `;
 };
+
+export default emailTemplate;

@@ -5,7 +5,7 @@ const nodemailer = require('nodemailer');
 const emailTemplate = require('../utils/emailTemplate');
 
 // @desc    Nodemailer send email
-// @route   POST /api/users/send
+// @route   POST /api/users/sendemail
 // @access  Public
 const sendEmail = asyncHandler(async (req, res) => {
   const { email } = req.body;
