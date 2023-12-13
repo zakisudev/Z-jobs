@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { loginUser } from '../services/userApis';
@@ -11,6 +11,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const location = useLocation();
+  const from = location.state || { from: { pathname: '/' } };
 
   const userInfo = JSON.parse(localStorage.getItem('userInfo')) || '';
 
@@ -45,7 +48,7 @@ const Login = () => {
       setEmail('');
       setPassword('');
       localStorage.setItem('userInfo', JSON.stringify(data));
-      navigate('/');
+      navigate(from.from);
     } catch (err) {
       setMessage(err?.message);
     } finally {

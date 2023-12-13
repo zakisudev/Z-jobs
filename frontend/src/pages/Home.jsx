@@ -37,7 +37,9 @@ export const Home = () => {
 
               {/* Call-to-action Button */}
               <button
-                onClick={() => navigate('/profile/jobs')}
+                onClick={() =>
+                  navigate('/login', { state: { from: '/profile/jobs' } })
+                }
                 className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded mt-8 transition duration-300"
               >
                 Get Started
