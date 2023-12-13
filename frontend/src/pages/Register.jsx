@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { registerUser } from '../services/userApis';
 import { toast } from 'react-toastify';
 import Loader from '../assets/images/Loading.svg';
+import { Navbar } from '../components/Navbar';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -74,66 +75,83 @@ const Register = () => {
 
   return (
     <>
-      <div className="flex justify-center mx-auto shadow-xl p-5 mb-5 w-1/3 mt-10">
+      <Navbar />
+      <div className="flex justify-center mx-auto shadow-xl pb-20 h-auto mb-5 w-1/3 mt-10 bg-gray-100 rounded-sm">
         <div className="flex flex-col justify-start items-center h-96 p-5">
-          <h1 className="text-3xl font-bold mb-5">Register</h1>
+          <h1 className="text-3xl font-bold mb-2">Register</h1>
           <form onSubmit={handleSubmit}>
-            <div className="flex w-full mt-3 border text-xl rounded-sm p-1">
+            <div className="flex w-full mt-1 text-xl rounded-sm p-1">
               <input
                 type="text"
                 value={username}
                 placeholder="Name"
                 name="name"
                 onChange={(e) => setUsername(e.target.value)}
+                className="p-2 border-2 shadow-lg"
+                required
               />
             </div>
-            <div className="flex w-full mt-3 border text-xl rounded-sm p-1">
+            <div className="flex w-full mt-1 text-xl rounded-sm p-1">
               <input
                 type="email"
                 value={email}
                 placeholder="Email"
                 name="email"
                 onChange={(e) => setEmail(e.target.value)}
+                className="p-2 border-2 shadow-lg"
+                required
               />
             </div>
-            <div className="flex w-full mt-3 border text-xl rounded-sm p-1">
+            <div className="flex w-full mt-1 text-xl rounded-sm p-1">
               <input
                 type="password"
                 value={password}
                 name="password"
                 placeholder="Password"
                 onChange={(e) => setPassword(e.target.value)}
+                className="p-2 border-2 shadow-lg"
+                required
               />
             </div>
-            <div className="flex w-full mt-3 border text-xl rounded-sm p-1">
+            <div className="flex w-full mt-1 text-xl rounded-sm p-1">
               <input
                 type="password"
                 value={confirmPassword}
                 name="confirmPassword"
                 placeholder="Confirm Password"
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                className="p-2 border-2 shadow-lg"
+                required
               />
             </div>
+
+            {isLoading ? (
+              <img src={Loader} alt="Loading..." className="w-6 h-6 mx-auto" />
+            ) : (
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="mt-3 w-full font-bold  text-white active:scale-95 text-xl py-2 rounded-sm border-none bg-blue-500 transition-all duration-100"
+              >
+                Register
+              </button>
+            )}
+
             {message && (
               <div>
-                <p className="text-red-500 text-center py-2">{message}</p>
+                <p className="text-red-500 text-center">{message}</p>
               </div>
             )}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="mt-5 w-full font-bold  text-white active:scale-95 text-xl p-1 rounded-sm border-none bg-blue-500 transition-all duration-100"
-            >
-              {isLoading ? (
-                <img
-                  src={Loader}
-                  alt="Loading..."
-                  className="w-6 h-6 mx-auto"
-                />
-              ) : (
-                'Register'
-              )}
-            </button>
+
+            <div className="flex text-center mt-5">
+              <p className="text-lg">Already have an account?</p>
+              <button
+                onClick={() => navigate('/login')}
+                className="text-lg text-blue-500 underline font-bold"
+              >
+                Login
+              </button>
+            </div>
           </form>
         </div>
       </div>
