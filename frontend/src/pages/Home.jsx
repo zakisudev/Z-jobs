@@ -5,6 +5,20 @@ import image from '../assets/images/bg.png';
 export const Home = () => {
   const navigate = useNavigate();
 
+  const user = JSON.parse(localStorage.getItem('userInfo')) || null;
+
+  const handleUser = () => {
+    if (user) {
+      if (user.isVerified) {
+        navigate('/profile/jobs');
+      } else {
+        navigate('/profile/verify');
+      }
+    } else {
+      navigate('/register');
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col h-screen overflow-hidden">
@@ -37,9 +51,7 @@ export const Home = () => {
 
               {/* Call-to-action Button */}
               <button
-                onClick={() =>
-                  navigate('/login', { state: { from: '/profile/jobs' } })
-                }
+                onClick={handleUser}
                 className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded mt-8 transition duration-300"
               >
                 Get Started
