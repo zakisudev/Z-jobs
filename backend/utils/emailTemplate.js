@@ -1,4 +1,4 @@
-const emailTemplate = () => {
+const emailTemplate = (userId) => {
   return `
     <div style="
       font-family: Arial, sans-serif;
@@ -12,7 +12,8 @@ const emailTemplate = () => {
     ">
       <h1 style="color: #444444;">Welcome to Z-jobs!</h1>
       <p style="color: #666666;">Thank you for registering. You're just one step away from completing your registration.</p>
-      <a href="${process.env.VERIFY_EMAIL_ADDRESS}" style="
+      <a href="http://localhost:5000/api/users/verify?userId=${userId}"
+        style="
         display: inline-block;
         margin: 20px auto;
         padding: 10px 20px;
