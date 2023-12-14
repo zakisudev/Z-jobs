@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { logoutUser } from '../services/userApis';
 import Loader from '../assets/images/Loading.svg';
+import { FaAnglesLeft } from 'react-icons/fa6';
 
 const Profile = () => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
@@ -26,7 +27,7 @@ const Profile = () => {
       <div className="flex gap-2">
         <div className="flex flex-col w-1/5 border bg-gray-400 shadow-lg h-screen">
           <ul className="flex flex-col mx-auto w-full">
-            <li className="flex flex-col items-center justify-center w-full h-24 bg-teal-200">
+            <li className="flex flex-col items-center justify-center w-full h-24 bg-teal-300">
               <span className="rounded-full bg-blue-500 p-2 text-white font-bold">
                 {userInfo.username.toUpperCase()}
               </span>
@@ -34,9 +35,10 @@ const Profile = () => {
             </li>
             <li>
               <NavLink
-                className="flex pl-10 items-center text-xl w-full h-20 hover:bg-teal-200 transition-all"
+                className="flex pl-10 items-center text-xl w-full h-10 hover:text-teal-800 hover:font-bold transition-all"
                 to="/"
               >
+                <FaAnglesLeft className="mr-5" />
                 Home
               </NavLink>
             </li>
