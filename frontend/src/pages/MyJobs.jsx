@@ -3,16 +3,25 @@ import NewForm from '../components/NewForm';
 import JobTable from '../components/JobTable';
 import { getAllJobs } from '../services/jobApis';
 import { FaFolderPlus } from 'react-icons/fa';
+import { verifyEmail } from '../services/userApis';
 import { useNavigate } from 'react-router-dom';
-import { sendVerifyEmail } from '../services/userApis';
 
 const MyJobs = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [jobs, setJobs] = useState([]);
-  const [verify, setVerify] = useState(false);
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem('userInfo')) || null;
+  const user = JSON.parse(localStorage.getItem('userInfo')) || '';
+
+  useEffect(() => {
+    const fetchVerify = async () => {
+      const res = await verifyEmail();
+      if (res) {
+        localStorage.setItem('userInfo', JSON.stringify(res));
+      }
+    };
+    fetchVerify();
+  }, [user.isVerified]);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -23,21 +32,11 @@ const MyJobs = () => {
       navigate('/login');
     }
     fetchJobs();
-  }, [setJobs, setShowCreateModal, navigate, user]);
+  }, [setJobs, setShowCreateModal, navigate]);
 
   const handleCreateModal = (e) => {
     e.preventDefault();
     setShowCreateModal(true);
-  };
-
-  const handleVerify = async (e) => {
-    e.preventDefault();
-    try {
-      await sendVerifyEmail();
-      setVerify(true);
-    } catch (error) {
-      console.log(error);
-    }
   };
 
   return (
@@ -96,4 +95,5 @@ const MyJobs = () => {
     </>
   );
 };
+
 export default MyJobs;
