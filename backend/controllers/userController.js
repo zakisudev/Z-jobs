@@ -116,12 +116,12 @@ const registerUser = asyncHandler(async (req, res) => {
   generateToken(res, user._id);
 
   let transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    host: 'us2.smtp.mailhostbox.com',
+    port: 587,
+    // secure: true,
     auth: {
-      user: 'zakisu250@gmail.com',
-      pass: 'lhrowgxldwnkvais',
+      user: process.env.EMAIL_ADDRESS,
+      pass: process.env.EMAIL_PASSWORD,
     },
   });
   try {
@@ -140,7 +140,7 @@ const registerUser = asyncHandler(async (req, res) => {
       isAdmin: user.isAdmin,
       isVerified: user.isVerified,
     });
-    console.log(info.messageId, user.isVerified);
+    console.log(info.messageId);
   } catch (error) {
     res.status(500);
     throw new Error(error);
