@@ -1,110 +1,33 @@
 const User = require('../models/userModel');
 const asyncHandler = require('express-async-handler');
 const generateToken = require('../utils/generateToken');
+// const decodeToken = require('../utils/generateToken');
 const nodemailer = require('nodemailer');
 const emailTemplate = require('../utils/emailTemplate');
 
-// @desc    Nodemailer send email
-// @route   POST /api/users/sendemail
-// @access  Public
-const sendEmail = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-
-  // Check for email
-  if (!email) {
-    res.status(400);
-    throw new Error('Please provide an email');
-  }
-
-  // Check if email is valid email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    res.status(400);
-    throw new Error('Please provide a valid email');
-  }
-
-  // Check first if the user exists
-  const userExists = await User.findOne({ email });
-
-  if (!userExists) {
-    res.status(400);
-    throw new Error("User doesn't exists");
-  }
-
-  // Send the email
-  const transporter = nodemailer.createTransport({
-    host: 'us2.smtp.mailhostbox.com',
-    port: 587,
-    auth: {
-      user: process.env.EMAIL_ADDRESS,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
-
-  const mailOptions = {
-    from: `Support, ${process.env.EMAIL_ADDRESS}`,
-    to: userExists.email,
-    subject: 'Verify your email',
-    html: emailTemplate(),
-  };
-
-  try {
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        res.status(500);
-        throw new Error('Email not sent');
-      } else {
-        res
-          .status(200)
-          .json({ message: 'Email sent, please check your inbox' });
-      }
-    });
-  } catch (error) {
-    res.status(500);
-    throw new Error('Email not sent');
-  }
-});
-
 // @desc    Nodemailer email verification
-// @route   POST /api/users/verify
+// @route   GET /api/users/verify
 // @access  Public
 const verifyEmail = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+  const userId = req.query.userId;
 
-  // Check for email
-  if (!email) {
-    res.status(400);
-    throw new Error('Please provide an email');
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(400);
+      throw new Error('Invalid token');
+    }
+
+    user.isVerified = true;
+    await user.save();
+
+    res
+      .status(200)
+      .redirect('http://localhost:3000/profile/account?verify=success');
+  } catch (error) {
+    res.status(500);
+    throw new Error('Email not verified');
   }
-
-  // Check if email is valid email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    res.status(400);
-    throw new Error('Please provide a valid email');
-  }
-
-  // Check if the user already exists
-  const userExists = await User.findOne({ email });
-
-  if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
-  }
-
-  // Create the user
-  const user = await User.create({
-    email,
-  });
-
-  // Send the user information and the token cookie
-  generateToken(res, user._id);
-
-  res.status(201).json({
-    _id: user._id,
-    email: user.email,
-    isAdmin: user.isAdmin,
-  });
 });
 
 // @desc    Auth user & get token
@@ -139,6 +62,7 @@ const authUser = asyncHandler(async (req, res) => {
       username: user.username,
       email: user.email,
       isAdmin: user.isAdmin,
+      isVerified: user.isVerified,
     });
   } else {
     // Send an error message
@@ -154,9 +78,10 @@ const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
   // Check for email, username, or password
-  if (!email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
     res.status(400);
-    throw new Error('Please provide an email');
+    throw new Error('Please provide a valid email');
   }
   if (!username) {
     res.status(400);
@@ -165,13 +90,6 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!password) {
     res.status(400);
     throw new Error('Please provide a password');
-  }
-
-  // Check if email is valid email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    res.status(400);
-    throw new Error('Please provide a valid email');
   }
 
   // Check if password is at least 6 characters
@@ -195,32 +113,38 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
   });
 
-  if (user) {
-    let transporter = nodemailer.createTransport({
-      host: 'us2.smtp.mailhostbox.com',
-      port: 587,
-      // secure: true,
-      auth: {
-        user: process.env.EMAIL_ADDRESS,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-    let info = await transporter.sendMail({
-      from: `Support@Z-jobs <${process.env.EMAIL_ADDRESS}>`,
-      to: email,
-      subject: 'Welcome to Z-jobs',
-      html: emailTemplate(),
-    });
-  }
-  // Send the user information and the token cookie
   generateToken(res, user._id);
 
-  res.status(201).json({
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    isAdmin: user.isAdmin,
+  let transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: 'zakisu250@gmail.com',
+      pass: 'lhrowgxldwnkvais',
+    },
   });
+  try {
+    const info = await transporter.sendMail({
+      from: `Support:z-jobs <${process.env.EMAIL_ADDRESS}>`,
+      to: email,
+      subject: 'Welcome to Z-jobs',
+      html: emailTemplate(user._id),
+    });
+
+    // Send the user information and the token cookie
+    res.status(201).json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      isVerified: user.isVerified,
+    });
+    console.log(info.messageId, user.isVerified);
+  } catch (error) {
+    res.status(500);
+    throw new Error(error);
+  }
 });
 
 // @desc    Log the user out
@@ -249,6 +173,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       username: user.username,
       email: user.email,
       isAdmin: user.isAdmin,
+      isVerified: user.isVerified,
     });
   } else {
     // Send an error message
@@ -284,6 +209,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       username: updatedUser.username,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
+      isVerified: updatedUser.isVerified,
     });
   } else {
     // Send an error message
@@ -381,7 +307,6 @@ const deleteUser = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  sendEmail,
   verifyEmail,
   authUser,
   registerUser,

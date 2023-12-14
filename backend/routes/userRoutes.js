@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const {
-  sendEmail,
   verifyEmail,
   authUser,
   registerUser,
@@ -18,8 +17,7 @@ const { protect, admin } = require('../middleware/authMiddleware');
 
 router.post('/login', authUser);
 router.post('/register', registerUser);
-router.post('/sendemail', sendEmail);
-router.post('/verifyemail', verifyEmail);
+router.get('/verify', verifyEmail);
 router.get('/logout', logoutUser);
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
