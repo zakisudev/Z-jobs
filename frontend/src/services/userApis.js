@@ -60,3 +60,14 @@ export const updateUserProfile = async (user) => {
     throw Error(err?.response?.data?.message || err.message);
   }
 };
+
+// Verify user email
+export const verifyEmail = async () => {
+  try {
+    const response = await axios.get(USER_PROFILE_URL);
+    const data = await response.data;
+    return data;
+  } catch (err) {
+    throw Error(err?.response?.data?.message || err.message);
+  }
+};
