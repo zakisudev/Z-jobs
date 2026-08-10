@@ -1,0 +1,91 @@
+# Local development stack. Production lives in docker-compose.prod.yml.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: z-jobs-mysql
+    restart: unless-stopped
+    # Bound to loopback: the previous 0.0.0.0 binding exposed the dev database
+    # to the local network.
+    ports:
+      - "127.0.0.1:3307:3306"
+    command:
+      # FULLTEXT tuning. These change how the index is BUILT, so they must be
+      # set before the first migration runs — changing them later requires
+      # rebuilding every FULLTEXT index.
+      #   min-token-size=2  -> default 3 silently drops "QA", "HR", "UI"
+      #   enable-stopword=0 -> "IT" and "developer" are not noise words here
+      - --innodb-ft-min-token-size=2
+      - --innodb-ft-enable-stopword=0
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: z_jobs
+      MYSQL_USER: zjobs
+      MYSQL_PASSWORD: zjobs
+    volumes:
+      - z_jobs_mysql_data:/var/lib/mysql
+      # NOTE: entrypoint scripts only run when the data dir is empty. If this
+      # never seems to apply, the volume predates it — `pnpm db:reset`.
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # S3-compatible storage for resumes and company logos, so the storage port
+  # runs against the same API locally as it does against R2 in production.
+  minio:
+    image: minio/minio:latest
+    container_name: z-jobs-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - z_jobs_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Creates the two buckets on first boot and marks only the public one readable.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      mc mb --ignore-existing local/zjobs-public;
+      mc mb --ignore-existing local/zjobs-private;
+      mc anonymous set download local/zjobs-public;
+      echo 'buckets ready (zjobs-private stays private)';
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: z-jobs-redis
+    restart: unless-stopped
+    ports:
+      # 6379 is commonly already taken by another local project's Redis.
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - z_jobs_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  z_jobs_mysql_data:
+  z_jobs_minio_data:
+  z_jobs_redis_data:

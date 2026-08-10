@@ -1,6 +1,6 @@
 # Z-Jobs
 
-Z-Jobs is a job listing application built with Node.js, Express, and MongoDB. It allows users to browse job listings, apply for jobs, and manage their applications.
+Z-Jobs is a job listing application built with Node.js, Express, React, and MySQL (via Prisma). It allows users to browse job listings, apply for jobs, and manage their applications.
 
 ## Features
 
@@ -16,7 +16,7 @@ These instructions will get you a copy of the project up and running on your loc
 ### Prerequisites
 
 - Node.js
-- MongoDB
+- Docker and Docker Compose (for local MySQL)
 
 ### Installation
 
@@ -33,23 +33,52 @@ cd Z-jobs
 npm install
 ```
 
-3. Create a `.env` file in the root directory of the project and add the following:
+3. Create a `.env` file in the root directory (see `.env.example`):
 
+```env
+PORT=5000
+NODE_ENV=development
 JWT_SECRET=YOUR_JWT_SECRET
+DATABASE_URL="mysql://zjobs:zjobs@127.0.0.1:3307/z_jobs"
+```
 
-MONGO_URI=YOUR_MONGO_DB_URI
+For production, set `NODE_ENV=production` and point `DATABASE_URL` at your production MySQL instance (for example `mysql://USER:PASSWORD@HOST:3306/z_jobs?connection_limit=10`).
 
-4. Start the server:
+4. Start the local MySQL database:
+
+```bash
+npm run db:up
+```
+
+5. Apply Prisma migrations and generate the client:
+
+```bash
+npm run prisma:migrate
+```
+
+6. Start the API (and optionally the React client):
 
 ```bash
 npm start
+# or for API + frontend together:
+npm run dev
 ```
 
-The application will be running at `http://localhost:3000`.
+The API runs at `http://localhost:5000`. The React client (via `npm run client` or `npm run dev`) runs at `http://localhost:3000`.
+
+### Useful scripts
+
+| Script                    | Description                                            |
+| ------------------------- | ------------------------------------------------------ |
+| `npm run db:up`           | Start local MySQL (Docker Compose, host port **3307**) |
+| `npm run db:down`         | Stop local MySQL                                       |
+| `npm run prisma:migrate`  | Run Prisma migrations                                  |
+| `npm run prisma:generate` | Generate Prisma Client                                 |
+| `npm run prisma:studio`   | Open Prisma Studio                                     |
 
 ## Usage
 
-After starting the server, you can register as a new user, browse jobs added, add jobs to your MyJobs section, Edit Your profile, and track your jobs easily.
+After starting the server, you can register as a new user, browse jobs added, add jobs to your MyJobs section, edit your profile, and track your jobs easily.
 
 ## Contributing
 

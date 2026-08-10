@@ -1,28 +1,45 @@
-# Node.js
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# React
+# Secrets — never commit. Keep these rules first.
+*.pem
+*.key
+*.p12
+*.pfx
 .env
+.env.*
+!.env.example
 
-# IDE/Editor specific
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
+# Dependencies
+node_modules/
+jspm_packages/
+bower_components/
+.pnpm-store/
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+.vercel
+
+# Build output
+/build/
+/dist/
+
+# Testing
+coverage/
+/playwright-report/
+/test-results/
+/blob-report/
 
 # Logs
 logs
 *.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Dependency directories
-jspm_packages/
-bower_components/
-
-# Testing
-coverage/
-
-# Build system
+# IDE / OS
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
 .DS_Store
 Thumbs.db

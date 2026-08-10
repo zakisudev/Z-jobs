@@ -1,0 +1,369 @@
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Z-Jobs design system — "Rooted Editorial".
+
+   Direction: Ethiopian-rooted, editorially confident. Deep forest green and
+   ink on warm paper, with gold reserved as the accent that marks what matters.
+   A display serif carries the voice; Inter carries the work.
+
+   ── Why colours are declared twice ──────────────────────────────────────────
+   Tailwind v4 only generates utilities from variables inside `@theme`. Colour
+   tokens previously lived in a bare `:root`, so `bg-primary`, `border-border`,
+   and `text-muted-foreground` compiled to NOTHING — verified against the
+   production CSS, where `.flex` and `.text-sm` emitted but no colour utility
+   did. The whole palette was dead on arrival.
+
+   The fix is `@theme inline`: utilities resolve to `var(--forest)` etc.
+   directly, so re-pointing the raw variable under a dark selector re-themes
+   the app with no second set of utilities.
+
+   The rule that stays: components reference SEMANTIC tokens only, never a raw
+   value like `bg-teal-300` and never the raw `--forest` layer below.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* The editorial voice. Used for headlines and numerals, never body copy. */
+  --font-display: var(--font-fraunces, ui-serif), Georgia, serif;
+  /* Amharic must not fall back to tofu boxes. */
+  --font-ethiopic: var(--font-noto-ethiopic), var(--font-inter), sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  /* A third surface level, so a panel inside a card never needs a card. */
+  --color-sunken: var(--sunken);
+
+  --color-muted: var(--wash);
+  --color-muted-foreground: var(--ink-soft);
+
+  --color-border: var(--line);
+  --color-border-strong: var(--line-strong);
+  --color-input: var(--line-strong);
+
+  --color-primary: var(--forest);
+  --color-primary-foreground: var(--forest-contrast);
+  --color-primary-hover: var(--forest-hover);
+  /* Tinted fills — pre-mixed rather than /10 opacity so they stay opaque
+     over any surface and keep their contrast promise. */
+  --color-primary-wash: var(--forest-wash);
+
+  --color-secondary: var(--wash);
+  --color-secondary-foreground: var(--ink);
+
+  /* Gold. Decorative at full strength, `-ink` when it must carry text. */
+  --color-accent: var(--gold);
+  --color-accent-foreground: var(--gold-contrast);
+  --color-accent-ink: var(--gold-ink);
+  --color-accent-wash: var(--gold-wash);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-contrast);
+  --color-success-wash: var(--success-wash);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-contrast);
+  --color-warning-wash: var(--warning-wash);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-contrast);
+  --color-destructive-wash: var(--danger-wash);
+
+  --color-ring: var(--forest);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  /* One type ramp. No ad-hoc text-[13px] anywhere. */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  /* Fluid display sizes: the headline scales with the viewport instead of
+     stepping at breakpoints, so it never crowds the edge on a 360px phone. */
+  --text-display-sm: clamp(1.75rem, 1.35rem + 1.9vw, 2.5rem);
+  --text-display: clamp(2.25rem, 1.5rem + 3.4vw, 4rem);
+  --text-display-lg: clamp(2.75rem, 1.6rem + 5vw, 5.25rem);
+
+  /* Editorial shadows: low, warm, and tinted toward the ink rather than pure
+     black, which reads grey and dirty over warm paper. */
+  --shadow-xs: 0 1px 2px 0 var(--shadow-tint);
+  --shadow-sm: 0 1px 3px 0 var(--shadow-tint), 0 1px 2px -1px var(--shadow-tint);
+  --shadow-md: 0 4px 12px -2px var(--shadow-tint), 0 2px 4px -2px var(--shadow-tint);
+  --shadow-lg: 0 12px 28px -6px var(--shadow-tint), 0 4px 10px -4px var(--shadow-tint);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* ── Light: warm paper ─────────────────────────────────────────────────────
+   Declared on bare :root so it is always the baseline. Never define a colour
+   only inside a media query or [data-theme] block. */
+:root {
+  --paper: oklch(0.985 0.005 92);
+  --surface: oklch(1 0 0);
+  --sunken: oklch(0.965 0.007 92);
+  --wash: oklch(0.955 0.008 95);
+
+  --ink: oklch(0.2 0.015 160);
+  --ink-soft: oklch(0.46 0.015 160);
+
+  --line: oklch(0.9 0.008 100);
+  --line-strong: oklch(0.84 0.01 100);
+
+  /* Deep forest. 5.6:1 on paper, and white on it clears AA at 5.8:1. */
+  --forest: oklch(0.42 0.085 158);
+  --forest-hover: oklch(0.35 0.085 158);
+  --forest-contrast: oklch(0.99 0.005 92);
+  --forest-wash: oklch(0.945 0.022 158);
+
+  /* Gold is a marker, not a text colour, at full strength — 2.1:1 on paper.
+     `--gold-ink` is the darkened cut that clears AA at 4.8:1. */
+  --gold: oklch(0.76 0.13 80);
+  --gold-contrast: oklch(0.24 0.04 80);
+  --gold-ink: oklch(0.47 0.1 72);
+  --gold-wash: oklch(0.955 0.035 85);
+
+  --success: oklch(0.48 0.11 152);
+  --success-contrast: oklch(0.99 0 0);
+  --success-wash: oklch(0.95 0.03 152);
+  --warning: oklch(0.55 0.12 65);
+  --warning-contrast: oklch(0.99 0 0);
+  --warning-wash: oklch(0.96 0.035 75);
+  --danger: oklch(0.52 0.18 27);
+  --danger-contrast: oklch(0.99 0 0);
+  --danger-wash: oklch(0.96 0.025 27);
+
+  --shadow-tint: oklch(0.2 0.02 160 / 0.08);
+  --grain-opacity: 0.035;
+}
+
+/* ── Dark: ink ─────────────────────────────────────────────────────────────
+   Same token names, re-pointed. Guarded so an explicit data-theme="light"
+   still wins over the OS preference. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: oklch(0.165 0.012 165);
+    --surface: oklch(0.205 0.014 165);
+    --sunken: oklch(0.185 0.013 165);
+    --wash: oklch(0.245 0.014 165);
+
+    --ink: oklch(0.95 0.005 95);
+    --ink-soft: oklch(0.71 0.014 100);
+
+    --line: oklch(0.28 0.014 165);
+    --line-strong: oklch(0.36 0.016 165);
+
+    --forest: oklch(0.75 0.11 158);
+    --forest-hover: oklch(0.83 0.1 158);
+    --forest-contrast: oklch(0.16 0.03 158);
+    --forest-wash: oklch(0.27 0.04 158);
+
+    --gold: oklch(0.8 0.12 82);
+    --gold-contrast: oklch(0.2 0.04 82);
+    --gold-ink: oklch(0.83 0.12 82);
+    --gold-wash: oklch(0.28 0.045 82);
+
+    --success: oklch(0.75 0.14 152);
+    --success-contrast: oklch(0.16 0.03 152);
+    --success-wash: oklch(0.27 0.05 152);
+    --warning: oklch(0.8 0.13 70);
+    --warning-contrast: oklch(0.18 0.03 70);
+    --warning-wash: oklch(0.29 0.05 70);
+    --danger: oklch(0.7 0.17 25);
+    --danger-contrast: oklch(0.16 0.03 25);
+    --danger-wash: oklch(0.29 0.06 25);
+
+    --shadow-tint: oklch(0 0 0 / 0.4);
+    --grain-opacity: 0.05;
+  }
+}
+
+/* The explicit toggle wins in both directions. */
+:root[data-theme="dark"] {
+  --paper: oklch(0.165 0.012 165);
+  --surface: oklch(0.205 0.014 165);
+  --sunken: oklch(0.185 0.013 165);
+  --wash: oklch(0.245 0.014 165);
+
+  --ink: oklch(0.95 0.005 95);
+  --ink-soft: oklch(0.71 0.014 100);
+
+  --line: oklch(0.28 0.014 165);
+  --line-strong: oklch(0.36 0.016 165);
+
+  --forest: oklch(0.75 0.11 158);
+  --forest-hover: oklch(0.83 0.1 158);
+  --forest-contrast: oklch(0.16 0.03 158);
+  --forest-wash: oklch(0.27 0.04 158);
+
+  --gold: oklch(0.8 0.12 82);
+  --gold-contrast: oklch(0.2 0.04 82);
+  --gold-ink: oklch(0.83 0.12 82);
+  --gold-wash: oklch(0.28 0.045 82);
+
+  --success: oklch(0.75 0.14 152);
+  --success-contrast: oklch(0.16 0.03 152);
+  --success-wash: oklch(0.27 0.05 152);
+  --warning: oklch(0.8 0.13 70);
+  --warning-contrast: oklch(0.18 0.03 70);
+  --warning-wash: oklch(0.29 0.05 70);
+  --danger: oklch(0.7 0.17 25);
+  --danger-contrast: oklch(0.16 0.03 25);
+  --danger-wash: oklch(0.29 0.06 25);
+
+  --shadow-tint: oklch(0 0 0 / 0.4);
+  --grain-opacity: 0.05;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  body {
+    /* Explicit, never transparent — a transparent body borrows the host's
+       background and breaks in embedded contexts. */
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* A visible focus ring on everything interactive. The old Navbar used
+     `focus:outline-none` with no replacement, removing the keyboard indicator
+     outright. */
+  :focus-visible {
+    outline: 2px solid var(--forest);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Amharic renders with the Ethiopic stack — including inside a display
+     heading, where the serif has no Ethiopic coverage at all. */
+  :lang(am) {
+    font-family: var(--font-noto-ethiopic), var(--font-inter), sans-serif;
+  }
+
+  /* Tabular numerals wherever figures are compared down a column: salaries,
+     counts, dates. Proportional digits make columns visibly ragged. */
+  :where(time, [data-numeric]) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* ── The display voice ───────────────────────────────────────────────────
+     Fraunces at a tight optical size. `wonk` and a low softness keep it from
+     reading as a wedding invitation. */
+  .display {
+    font-family: var(--font-fraunces, ui-serif), Georgia, serif;
+    font-variation-settings:
+      "SOFT" 0,
+      "WONK" 1,
+      "opsz" 84;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  /* The one italic accent that carries the brand voice. Used on a single
+     word per headline — more than that and it stops being emphasis. */
+  .display-accent {
+    font-style: italic;
+    font-variation-settings:
+      "SOFT" 8,
+      "WONK" 1,
+      "opsz" 84;
+    color: var(--gold-ink);
+  }
+
+  /* ── Editorial section label ─────────────────────────────────────────────
+     Small, tracked out, with a gold rule. This is the repeating motif that
+     ties home, browse, detail, and dashboard into one publication. */
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--gold), transparent);
+  }
+
+  /* ── Paper grain ─────────────────────────────────────────────────────────
+     Inline SVG turbulence, ~250 bytes, no network request and no CSP problem.
+     Sits under content and never intercepts a click. */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Decorative required marker. Kept out of the DOM text so it never becomes
+     part of a field's accessible name. */
+  .field-label[data-required]::after {
+    content: "*";
+    color: var(--danger);
+    margin-left: 0.125rem;
+  }
+
+  /* Keyboard users land here first; visually hidden until focused. */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    z-index: 999;
+    padding: 0.75rem 1rem;
+    background-color: var(--forest);
+    color: var(--forest-contrast);
+    border-radius: var(--radius-md);
+  }
+
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+  }
+}
+
+@layer utilities {
+  /* Hairline rules that read as printed, not as browser default. */
+  .rule-gold {
+    background: linear-gradient(to right, var(--gold), transparent);
+  }
+}

@@ -1,0 +1,793 @@
+// Z-Jobs — two-sided job board.
+//
+// Conventions:
+//   * PKs are cuid() in VarChar(30). Sequential ints are what made the old
+//     `/verify?userId=3` enumerable; the explicit width also keeps utf8mb4
+//     index entries at 120 bytes instead of the 764 a default VarChar(191) costs.
+//   * Money is Int in MINOR UNITS (santim). Never Float, never Decimal in app
+//     code. Converted to a decimal string only at the Chapa boundary.
+//   * Soft delete on User/Company/Job only. Applications and payments are
+//     records with legal weight — never soft-deleted, never hard-deleted.
+//   * Cascade flows only DOWN an ownership tree. Anything financial is Restrict,
+//     so deleting a company cannot silently vaporise its invoices.
+
+generator client {
+  provider        = "prisma-client-js"
+  // fullTextIndex graduated out of preview; @@fulltext works without a flag.
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── enums ─────────────────────────────
+
+enum UserRole {
+  SEEKER
+  EMPLOYER
+  ADMIN
+}
+
+enum CompanyRole {
+  OWNER
+  ADMIN
+  RECRUITER
+}
+
+enum MemberStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum CompanySize {
+  SIZE_1_10
+  SIZE_11_50
+  SIZE_51_200
+  SIZE_201_500
+  SIZE_500_PLUS
+}
+
+enum VerificationState {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum JobStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  EXPIRED
+  CLOSED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  TEMPORARY
+  INTERNSHIP
+  VOLUNTEER
+}
+
+enum WorkplaceType {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum ExperienceLevel {
+  INTERN
+  ENTRY
+  JUNIOR
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+
+enum SalaryPeriod {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  VIEWED
+  SHORTLISTED
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  EMAIL_CHANGE
+  COMPANY_INVITE
+}
+
+enum FileKind {
+  RESUME
+  COMPANY_LOGO
+  COMPANY_COVER
+  AVATAR
+}
+
+enum ScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+enum PlanKind {
+  FREE
+  ONE_OFF
+  BUNDLE
+  TERM
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum CreditKind {
+  JOB_POST
+  FEATURED
+}
+
+enum SubStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// ─────────────────────────── identity ───────────────────────────
+
+model User {
+  id              String    @id @default(cuid()) @db.VarChar(30)
+  email           String    @unique @db.VarChar(191)
+  emailVerifiedAt DateTime?
+  passwordHash    String    @db.VarChar(255) // argon2id
+  role            UserRole  @default(SEEKER)
+  firstName       String    @db.VarChar(80)
+  lastName        String    @db.VarChar(80)
+  phone           String?   @db.VarChar(24)
+  avatarFileId    String?   @db.VarChar(30)
+  locale          String    @default("en") @db.VarChar(8)
+  lastLoginAt     DateTime?
+  failedLogins    Int       @default(0)
+  lockedUntil     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  avatar        FileObject?     @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  sessions      Session[]
+  tokens        AuthToken[]
+  memberships   CompanyMember[]
+  seekerProfile SeekerProfile?
+  applications  Application[]
+  savedJobs     SavedJob[]
+  files         FileObject[]    @relation("FileOwner")
+  auditLogs     AuditLog[]      @relation("AuditActor")
+  createdJobs   Job[]           @relation("JobAuthor")
+
+  @@index([role])
+  @@index([createdAt])
+  @@index([avatarFileId])
+}
+
+/// Opaque server-side sessions. `id` IS the SHA-256 hex of the cookie token,
+/// so the raw token never touches the database and a stolen backup cannot be
+/// replayed as live sessions.
+model Session {
+  id              String   @id @db.Char(64)
+  userId          String   @db.VarChar(30)
+  activeCompanyId String?  @db.VarChar(30) // which tenant this session acts as
+  expiresAt       DateTime
+  ip              String?  @db.VarChar(45)
+  userAgent       String?  @db.VarChar(255)
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// One table for every one-shot secret (verify, reset, invite). Only the hash
+/// is stored; the raw token exists solely inside the email that carried it.
+model AuthToken {
+  id         String    @id @default(cuid()) @db.VarChar(30)
+  tokenHash  String    @unique @db.Char(64)
+  type       TokenType
+  userId     String?   @db.VarChar(30)
+  email      String?   @db.VarChar(191) // target for COMPANY_INVITE / EMAIL_CHANGE
+  companyId  String?   @db.VarChar(30)
+  payload    Json?
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@index([companyId])
+}
+
+// ──────────────────────── employer tenant ────────────────────────
+
+model Company {
+  id           String            @id @default(cuid()) @db.VarChar(30)
+  slug         String            @unique @db.VarChar(120)
+  name         String            @db.VarChar(160)
+  tagline      String?           @db.VarChar(200)
+  description  String?           @db.Text
+  website      String?           @db.VarChar(255)
+  size         CompanySize?
+  industryId   String?           @db.VarChar(30)
+  city         String?           @db.VarChar(80)
+  region       String?           @db.VarChar(60)
+  country      String            @default("ET") @db.Char(2)
+  tin          String?           @db.VarChar(20) // Ethiopian TIN, needed on invoices
+  logoFileId   String?           @db.VarChar(30)
+  coverFileId  String?           @db.VarChar(30)
+  verification VerificationState @default(UNVERIFIED)
+  verifiedAt   DateTime?
+  deletedAt    DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  industry Category?   @relation("CompanyIndustry", fields: [industryId], references: [id], onDelete: SetNull)
+  logo     FileObject? @relation("CompanyLogo", fields: [logoFileId], references: [id], onDelete: SetNull)
+  cover    FileObject? @relation("CompanyCover", fields: [coverFileId], references: [id], onDelete: SetNull)
+
+  members       CompanyMember[]
+  jobs          Job[]
+  wallet        Wallet?
+  creditLedger  CreditLedger[]
+  orders        Order[]
+  invoices      Invoice[]
+  subscriptions Subscription[]
+  tokens        AuthToken[]
+  files         FileObject[]    @relation("FileCompany")
+
+  @@index([verification])
+  @@index([region])
+  @@index([industryId])
+  @@index([logoFileId])
+  @@index([coverFileId])
+}
+
+model CompanyMember {
+  id          String       @id @default(cuid()) @db.VarChar(30)
+  companyId   String       @db.VarChar(30)
+  userId      String       @db.VarChar(30)
+  role        CompanyRole  @default(RECRUITER)
+  status      MemberStatus @default(ACTIVE)
+  invitedById String?      @db.VarChar(30)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+  // "which companies may I act for?" — resolved on every authenticated request
+  @@index([userId])
+}
+
+// ─────────────────────────── taxonomy ───────────────────────────
+
+model Category {
+  id        String  @id @default(cuid()) @db.VarChar(30)
+  slug      String  @unique @db.VarChar(80)
+  name      String  @db.VarChar(120)
+  nameAm    String? @db.VarChar(120) // Amharic label
+  parentId  String? @db.VarChar(30)
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryTree")
+  jobs      Job[]
+  companies Company[]  @relation("CompanyIndustry")
+
+  @@index([parentId, sortOrder])
+}
+
+// ────────────────────────── the vacancy ──────────────────────────
+
+model Job {
+  id          String @id @default(cuid()) @db.VarChar(30)
+  companyId   String @db.VarChar(30)
+  createdById String @db.VarChar(30)
+
+  slug        String  @unique @db.VarChar(180) // senior-backend-engineer-at-acme-x7f2k
+  title       String  @db.VarChar(160)
+  description String  @db.Text // sanitized HTML from the editor
+  summary     String? @db.VarChar(320) // meta description + card blurb
+
+  employmentType  EmploymentType
+  workplaceType   WorkplaceType   @default(ONSITE)
+  experienceLevel ExperienceLevel
+  categoryId      String?         @db.VarChar(30)
+
+  city     String? @db.VarChar(80)
+  region   String? @db.VarChar(60)
+  country  String  @default("ET") @db.Char(2)
+  isRemote Boolean @default(false) // denormalized from workplaceType for index-only filters
+
+  salaryMin      Int? // minor units
+  salaryMax      Int?
+  salaryCurrency String       @default("ETB") @db.Char(3)
+  salaryPeriod   SalaryPeriod @default(MONTHLY)
+  salaryIsPublic Boolean      @default(true)
+
+  vacancies          Int     @default(1)
+  applyExternally    Boolean @default(false)
+  externalApplyUrl   String? @db.VarChar(500)
+  applicationEmail   String? @db.VarChar(191)
+  screeningQuestions Json? // [{ id, label, type, required, options }]
+
+  status          JobStatus @default(DRAFT)
+  rejectionReason String?   @db.VarChar(500)
+  isFeatured      Boolean   @default(false)
+  featuredUntil   DateTime?
+  publishedAt     DateTime?
+  expiresAt       DateTime?
+  closedAt        DateTime?
+  deletedAt       DateTime?
+
+  viewCount        Int @default(0)
+  applicationCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy    User           @relation("JobAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  category     Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  applications Application[]
+  savedBy      SavedJob[]
+  creditUses   CreditLedger[]
+
+  // public listing paths
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([status, categoryId, publishedAt(sort: Desc)])
+  @@index([status, region, publishedAt(sort: Desc)])
+  @@index([status, employmentType, publishedAt(sort: Desc)])
+  @@index([status, isRemote, publishedAt(sort: Desc)])
+  @@index([status, isFeatured, publishedAt(sort: Desc)])
+  // employer dashboard
+  @@index([companyId, status, createdAt(sort: Desc)])
+  // expiry cron
+  @@index([status, expiresAt])
+  @@index([createdById])
+  // search
+  @@fulltext([title, description])
+  @@fulltext([title])
+}
+
+model Application {
+  id        String @id @default(cuid()) @db.VarChar(30)
+  jobId     String @db.VarChar(30)
+  seekerId  String @db.VarChar(30)
+  /// DENORMALIZED tenant key. Without it, "list applications for my company"
+  /// requires a join through Job, and the first query that filters on jobId
+  /// alone reintroduces the IDOR this schema exists to prevent.
+  companyId String @db.VarChar(30)
+
+  status       ApplicationStatus @default(SUBMITTED)
+  coverLetter  String?           @db.Text
+  resumeFileId String?           @db.VarChar(30)
+  answers      Json? // responses to Job.screeningQuestions
+  employerNote String?           @db.Text // internal, never shown to the seeker
+  rating       Int?              @db.TinyInt // 1..5 recruiter rating
+
+  viewedAt        DateTime?
+  statusChangedAt DateTime?
+  withdrawnAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  job    Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  seeker User               @relation(fields: [seekerId], references: [id], onDelete: Cascade)
+  resume FileObject?        @relation(fields: [resumeFileId], references: [id], onDelete: SetNull)
+  events ApplicationEvent[]
+
+  @@unique([jobId, seekerId]) // hard stop on duplicate applications
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([jobId, status, createdAt(sort: Desc)])
+  @@index([seekerId, createdAt(sort: Desc)])
+  @@index([resumeFileId])
+}
+
+model ApplicationEvent {
+  id            String             @id @default(cuid()) @db.VarChar(30)
+  applicationId String             @db.VarChar(30)
+  actorUserId   String?            @db.VarChar(30)
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  note          String?            @db.VarChar(500)
+  createdAt     DateTime           @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
+}
+
+// ───────────────────────── seeker side ─────────────────────────
+
+model SeekerProfile {
+  id     String @id @default(cuid()) @db.VarChar(30)
+  userId String @unique @db.VarChar(30)
+
+  headline              String?          @db.VarChar(160)
+  bio                   String?          @db.Text
+  city                  String?          @db.VarChar(80)
+  region                String?          @db.VarChar(60)
+  yearsExperience       Int?
+  experienceLevel       ExperienceLevel?
+  desiredSalaryMin      Int?
+  desiredSalaryCurrency String           @default("ETB") @db.Char(3)
+  openToWork            Boolean          @default(true)
+  openToRemote          Boolean          @default(false)
+  /// OPT-IN to employer CV search. Defaults off — consent must be given, not
+  /// withdrawn.
+  isSearchable          Boolean          @default(false)
+  linkedinUrl           String?          @db.VarChar(255)
+  githubUrl             String?          @db.VarChar(255)
+  portfolioUrl          String?          @db.VarChar(255)
+  primaryResumeId       String?          @db.VarChar(30)
+  completeness          Int              @default(0) // 0..100, drives the profile nudge
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryResume FileObject?      @relation("PrimaryResume", fields: [primaryResumeId], references: [id], onDelete: SetNull)
+  skills        SeekerSkill[]
+  educations    Education[]
+  experiences   WorkExperience[]
+
+  @@index([isSearchable, openToWork])
+  @@index([region])
+  @@index([primaryResumeId])
+}
+
+model Skill {
+  id      String        @id @default(cuid()) @db.VarChar(30)
+  slug    String        @unique @db.VarChar(80)
+  name    String        @db.VarChar(80)
+  seekers SeekerSkill[]
+}
+
+model SeekerSkill {
+  profileId String @db.VarChar(30)
+  skillId   String @db.VarChar(30)
+  years     Int?
+
+  profile SeekerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill   Skill         @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, skillId])
+  @@index([skillId])
+}
+
+model Education {
+  id          String  @id @default(cuid()) @db.VarChar(30)
+  profileId   String  @db.VarChar(30)
+  institution String  @db.VarChar(160)
+  degree      String? @db.VarChar(120)
+  field       String? @db.VarChar(120)
+  startYear   Int?
+  endYear     Int?
+
+  profile SeekerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model WorkExperience {
+  id        String    @id @default(cuid()) @db.VarChar(30)
+  profileId String    @db.VarChar(30)
+  company   String    @db.VarChar(160)
+  title     String    @db.VarChar(160)
+  startDate DateTime
+  endDate   DateTime?
+  isCurrent Boolean   @default(false)
+  summary   String?   @db.Text
+
+  profile SeekerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model SavedJob {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  userId    String   @db.VarChar(30)
+  jobId     String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([jobId])
+}
+
+model JobAlert {
+  id                   String    @id @default(cuid()) @db.VarChar(30)
+  userId               String?   @db.VarChar(30) // null = email-only subscriber
+  email                String    @db.VarChar(191)
+  query                String?   @db.VarChar(200)
+  filters              Json?
+  frequency            String    @default("WEEKLY") @db.VarChar(16)
+  confirmedAt          DateTime?
+  lastSentAt           DateTime?
+  unsubscribeTokenHash String    @unique @db.Char(64)
+  createdAt            DateTime  @default(now())
+
+  @@index([frequency, lastSentAt])
+}
+
+// ───────────────────────────── files ─────────────────────────────
+
+model FileObject {
+  id           String     @id @default(cuid()) @db.VarChar(30)
+  kind         FileKind
+  bucket       String     @db.VarChar(63)
+  objectKey    String     @unique @db.VarChar(400)
+  mimeType     String     @db.VarChar(120)
+  sizeBytes    Int
+  checksum     String?    @db.VarChar(64)
+  originalName String     @db.VarChar(255)
+  scanStatus   ScanStatus @default(PENDING)
+  isPublic     Boolean    @default(false) // true ONLY for logos and covers
+  ownerUserId  String?    @db.VarChar(30)
+  companyId    String?    @db.VarChar(30)
+  /// null = presigned but the upload never completed; the sweeper GCs these.
+  confirmedAt  DateTime?
+  createdAt    DateTime   @default(now())
+
+  owner   User?    @relation("FileOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  company Company? @relation("FileCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  applications Application[]
+  primaryFor   SeekerProfile[] @relation("PrimaryResume")
+  avatarFor    User[]          @relation("UserAvatar")
+  logoFor      Company[]       @relation("CompanyLogo")
+  coverFor     Company[]       @relation("CompanyCover")
+
+  @@index([ownerUserId, kind])
+  @@index([confirmedAt])
+  @@index([companyId])
+}
+
+// ──────────────────────────── billing ────────────────────────────
+
+model Plan {
+  id                 String   @id @default(cuid()) @db.VarChar(30)
+  code               String   @unique @db.VarChar(40) // free, post_1, bundle_5, pro_90
+  name               String   @db.VarChar(80)
+  kind               PlanKind
+  priceMinor         Int // santim
+  currency           String   @default("ETB") @db.Char(3)
+  jobPostCredits     Int      @default(0)
+  featuredCredits    Int      @default(0)
+  listingDays        Int      @default(30)
+  creditValidityDays Int      @default(365)
+  maxActiveJobs      Int? // null = unbounded; enforces the FREE tier ceiling
+  perks              Json?
+  isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
+
+  orders        Order[]
+  subscriptions Subscription[]
+}
+
+/// A tenant's cached balances. The authoritative source is CreditLedger; this
+/// row is updated inside the same transaction as every ledger write.
+model Wallet {
+  companyId       String   @id @db.VarChar(30)
+  jobPostBalance  Int      @default(0)
+  featuredBalance Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+/// Append-only. delta > 0 grants, delta < 0 spends.
+model CreditLedger {
+  id           String     @id @default(cuid()) @db.VarChar(30)
+  companyId    String     @db.VarChar(30)
+  kind         CreditKind
+  delta        Int
+  balanceAfter Int
+  reason       String     @db.VarChar(80) // order.paid, job.published, admin.grant, job.refund
+  orderId      String?    @db.VarChar(30)
+  jobId        String?    @db.VarChar(30)
+  actorUserId  String?    @db.VarChar(30)
+  expiresAt    DateTime?
+  createdAt    DateTime   @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  job     Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, kind, createdAt(sort: Desc)])
+  @@index([orderId])
+  @@index([jobId])
+}
+
+/// Fixed-term entitlement. Chapa has no dependable card-on-file recurring
+/// primitive for ETB, so this is renewed by an explicit purchase, not a mandate.
+model Subscription {
+  id                    String    @id @default(cuid()) @db.VarChar(30)
+  companyId             String    @db.VarChar(30)
+  planId                String    @db.VarChar(30)
+  status                SubStatus @default(ACTIVE)
+  startsAt              DateTime
+  endsAt                DateTime
+  renewalReminderSentAt DateTime?
+  createdAt             DateTime  @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan    Plan    @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, status])
+  @@index([status, endsAt]) // renewal-reminder cron
+  @@index([planId])
+}
+
+model Order {
+  id          String      @id @default(cuid()) @db.VarChar(30)
+  companyId   String      @db.VarChar(30)
+  planId      String      @db.VarChar(30)
+  createdById String      @db.VarChar(30)
+  txRef       String      @unique @db.VarChar(64) // OUR idempotency key, sent to Chapa
+  amountMinor Int
+  currency    String      @default("ETB") @db.Char(3)
+  status      OrderStatus @default(PENDING)
+  provider    String      @default("chapa") @db.VarChar(24)
+  checkoutUrl String?     @db.VarChar(600)
+  paidAt      DateTime?
+  expiresAt   DateTime // abandoned after 1h, then reconciled
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  plan     Plan           @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments Payment[]
+  invoice  Invoice?
+  ledger   CreditLedger[]
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([status, expiresAt])
+  @@index([planId])
+}
+
+model Payment {
+  id            String        @id @default(cuid()) @db.VarChar(30)
+  orderId       String        @db.VarChar(30)
+  provider      String        @db.VarChar(24)
+  providerRef   String?       @db.VarChar(120) // Chapa reference / FT number
+  status        PaymentStatus @default(INITIATED)
+  amountMinor   Int
+  currency      String        @default("ETB") @db.Char(3)
+  method        String?       @db.VarChar(40) // telebirr | cbebirr | card
+  failureReason String?       @db.VarChar(255)
+  rawResponse   Json?
+  settledAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerRef])
+  @@index([orderId])
+}
+
+model Invoice {
+  id            String   @id @default(cuid()) @db.VarChar(30)
+  orderId       String   @unique @db.VarChar(30)
+  companyId     String   @db.VarChar(30)
+  number        String   @unique @db.VarChar(32) // ZJ-2026-000123
+  subtotalMinor Int
+  taxMinor      Int      @default(0) // 15% ET VAT once registered
+  totalMinor    Int
+  currency      String   @default("ETB") @db.Char(3)
+  billToName    String   @db.VarChar(160)
+  billToTin     String?  @db.VarChar(20)
+  issuedAt      DateTime @default(now())
+  pdfFileId     String?  @db.VarChar(30)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, issuedAt(sort: Desc)])
+}
+
+/// Webhook idempotency plus a forensic record. The row is inserted BEFORE
+/// processing: a duplicate-key error on (provider, eventKey) IS the replay check.
+model WebhookEvent {
+  id          String    @id @default(cuid()) @db.VarChar(30)
+  provider    String    @db.VarChar(24)
+  eventKey    String    @db.VarChar(160) // "<event>:<txRef>"
+  signatureOk Boolean
+  payload     Json
+  processedAt DateTime?
+  error       String?   @db.VarChar(500)
+  receivedAt  DateTime  @default(now())
+
+  @@unique([provider, eventKey])
+  @@index([processedAt])
+}
+
+// ────────────────────────────── ops ──────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid()) @db.VarChar(30)
+  actorUserId String?  @db.VarChar(30)
+  companyId   String?  @db.VarChar(30)
+  action      String   @db.VarChar(60) // job.published, member.role_changed, order.paid
+  entityType  String   @db.VarChar(40)
+  entityId    String?  @db.VarChar(30)
+  ip          String?  @db.VarChar(45)
+  userAgent   String?  @db.VarChar(255)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+}
+
+model JobStatDaily {
+  jobId   String   @db.VarChar(30)
+  day     DateTime @db.Date
+  views   Int      @default(0)
+  applies Int      @default(0)
+
+  @@id([jobId, day])
+  @@index([day])
+}
+
+/// Fallback rate-limit store for when Redis is unavailable on a single-node deploy.
+model RateLimitBucket {
+  key     String   @id @db.VarChar(160)
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
+}
